@@ -377,9 +377,11 @@ class OutlookPlugin(IndicoPlugin):
             if user in event.favorite_of and self._user_tracks_favorite_events(user):
                 return
             for category in reversed(event.category.chain_query.all()):
-                if user in category.favorite_of \
-                    and self._user_tracks_favorite_categories(user) \
-                    and event.can_access(user):
+                if (
+                    user in category.favorite_of
+                    and self._user_tracks_favorite_categories(user)
+                    and event.can_access(user)
+                ):
                     return
                 # Stop once we reach the visibility horizon of the event
                 if category is event.category.real_visibility_horizon:
