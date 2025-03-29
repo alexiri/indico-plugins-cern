@@ -7,6 +7,7 @@
 
 from collections import defaultdict
 from datetime import timedelta
+from itertools import islice
 
 from flask import g
 from sqlalchemy.orm import subqueryload
@@ -57,6 +58,11 @@ class SettingsForm(IndicoForm):
     timeout = FloatField(_('Request timeout'), [NumberRange(min=0.25)], description=_('Request timeout in seconds'))
     max_event_duration = TimeDeltaField(_('Maximum Duration'), [DataRequired()], units=('days',),
                                         description=_('Events lasting longer will not be sent to Exchange'))
+    max_category_events = IntegerField(
+        _('Maximum number events to edit in the calendar at once'), [NumberRange(min=-1)],
+        description=_('If a user favorites a very large category, there may be too many events to edit in the calendar '
+                      'at once. This setting limits the number of upcoming events to edit when a category is '
+                      'favorited/unfavorited. If you set this to -1, all events will be added/deleted.'))
 
 
 class OutlookUserPreferences(ExtraUserPreferences):
@@ -172,7 +178,8 @@ class OutlookPlugin(IndicoPlugin):
         'reminder_minutes': 15,
         'id_prefix': 'indico_',
         'timeout': 3,
-        'max_event_duration': timedelta(days=30)
+        'max_event_duration': timedelta(days=30),
+        'max_category_events': -1,
     }
     settings_converters = {
         'max_event_duration': TimedeltaConverter
@@ -229,6 +236,12 @@ class OutlookPlugin(IndicoPlugin):
         return OutlookPlugin.user_settings.get(user, 'favorite_categories',
                                                OutlookPlugin.default_user_settings['favorite_categories'])
 
+    def _event_limit(self):
+        limit = OutlookPlugin.settings.get('max_category_events')
+        if limit == -1:
+            return None
+        return limit
+
     def favorite_event_added(self, user, event, **kwargs):
         if not self._user_tracks_favorite_events(user):
             return
@@ -251,7 +264,7 @@ class OutlookPlugin(IndicoPlugin):
                          ~Event.is_deleted)
                  .options(subqueryload('acl_entries'))
                  .order_by(Event.start_dt, Event.id))
-        events = [e for e in query if e.can_access(user)]
+        events = islice((e for e in query if e.can_access(user)), self._event_limit())
         for event in events:
             self._record_change(event, user, OutlookAction.add)
             self.logger.info('Favorite category added: user %s added event %r', user, event)
@@ -268,7 +281,7 @@ class OutlookPlugin(IndicoPlugin):
                          ~Event.is_deleted)
                  .options(subqueryload('acl_entries'))
                  .order_by(Event.start_dt, Event.id))
-        events = [e for e in query if e.can_access(user)]
+        events = islice((e for e in query if e.can_access(user)), self._event_limit())
         for event in events:
             self._record_change(event, user, OutlookAction.remove)
             self.logger.info('Favorite category added: user %s added event %r', user, event)
