@@ -188,7 +188,7 @@ class OutlookPlugin(IndicoPlugin):
         'enabled': True,  # XXX: if the default value ever changes, adapt `get_registered_users`!
         'registered': True,
         'favorite_events': True,
-        'favorite_categories': True,
+        'favorite_categories': False,
         'status': None,
         'reminder': True,
         'reminder_minutes': 15,
