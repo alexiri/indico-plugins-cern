@@ -361,15 +361,15 @@ class OutlookPlugin(IndicoPlugin):
 
         for user in users_to_update:
             self.logger.info('Event deletion: removing %s in %r', user, event)
-            self._record_change(event, user, OutlookAction.force_remove)
+            self._record_change(event, user, OutlookAction.remove, force_remove=True)
 
-    def _record_change(self, event, user, action):
+    def _record_change(self, event, user, action, force_remove=False):
         if is_event_excluded(event):
             return
         if 'outlook_changes' not in g:
             g.outlook_changes = []
 
-        if action == OutlookAction.remove:
+        if action == OutlookAction.remove and not force_remove:
             # Only remove an event if the user *really* shouldn't have it in their calendar
 
             if user in get_registered_users(event) and self._user_tracks_registered_events(user):

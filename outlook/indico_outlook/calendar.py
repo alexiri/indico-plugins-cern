@@ -156,7 +156,7 @@ def _update_calendar_entry(entry, settings):
             data.update(update)
         # the API expects the field to be named 'body', contrarily to our usage
         data['body'] = data.pop('description')
-    elif entry.action in {OutlookAction.remove, OutlookAction.force_remove}:
+    elif entry.action == OutlookAction.remove:
         method = 'DELETE'
         data = None
     else:
